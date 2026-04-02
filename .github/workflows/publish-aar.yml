@@ -1,0 +1,49 @@
+# Builds inspector_host_module with `flutter build aar` and uploads
+# com.example.inspector_host_module + com.example.flutter_debug_inspector AARs
+# to this repository's GitHub Packages Maven registry.
+#
+# Trigger: Actions tab → "Publish AAR to GitHub Packages" → Run workflow,
+# or publish a GitHub Release.
+#
+# Consumers still need maven { url "https://storage.googleapis.com/download.flutter.io" }
+# for io.flutter engine artifacts referenced by the POMs.
+
+name: Publish AAR to GitHub Packages
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Maven
+        run: sudo apt-get update && sudo apt-get install -y maven
+
+      - name: flutter build aar
+        run: |
+          cd inspector_host_module
+          flutter pub get
+          flutter build aar
+
+      - name: Publish to GitHub Packages
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_ACTOR: ${{ github.actor }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: ./tool/publish_github_packages.sh
