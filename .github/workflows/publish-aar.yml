@@ -8,8 +8,8 @@
 # Consumers still need maven { url "https://storage.googleapis.com/download.flutter.io" }
 # for io.flutter engine artifacts referenced by the POMs.
 #
-# Repo secret: SLICE_GITHUB_TOKEN — PAT with packages:write (publish) and repo read;
-#   used for checkout, flutter-action cache/API, and mvn deploy to GitHub Packages.
+# Optional repo secret ANKIT_CRED (PAT with packages:write, etc.). If unset/empty,
+# the workflow falls back to secrets.GITHUB_TOKEN for GH_TOKEN.
 
 name: Publish AAR to GitHub Packages
 
@@ -25,18 +25,20 @@ permissions:
 jobs:
   publish:
     runs-on: flutter-build-runner
+    env:
+      GH_TOKEN: ${{ secrets.ANKIT_CRED != '' && secrets.ANKIT_CRED || secrets.GITHUB_TOKEN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.SLICE_GITHUB_TOKEN }}
+          token: ${{ env.GH_TOKEN }}
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
-          token: ${{ secrets.SLICE_GITHUB_TOKEN }}
+          token: ${{ env.GH_TOKEN }}
 
       - name: Require Maven on runner
         run: command -v mvn
@@ -49,7 +51,7 @@ jobs:
 
       - name: Publish to GitHub Packages
         env:
-          GITHUB_TOKEN: ${{ secrets.SLICE_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ env.GH_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: ./tool/publish_github_packages.sh
