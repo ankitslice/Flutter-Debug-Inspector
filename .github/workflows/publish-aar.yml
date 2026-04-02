@@ -7,6 +7,9 @@
 #
 # Consumers still need maven { url "https://storage.googleapis.com/download.flutter.io" }
 # for io.flutter engine artifacts referenced by the POMs.
+#
+# Repo secret: SLICE_GITHUB_TOKEN — PAT with packages:write (publish) and repo read;
+#   used for checkout, flutter-action cache/API, and mvn deploy to GitHub Packages.
 
 name: Publish AAR to GitHub Packages
 
@@ -21,19 +24,22 @@ permissions:
 
 jobs:
   publish:
-    runs-on: ubuntu-latest
+    runs-on: flutter-build-runner
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.SLICE_GITHUB_TOKEN }}
 
       - name: Set up Flutter
         uses: subosito/flutter-action@v2
         with:
           channel: stable
           cache: true
+          token: ${{ secrets.SLICE_GITHUB_TOKEN }}
 
-      - name: Install Maven
-        run: sudo apt-get update && sudo apt-get install -y maven
+      - name: Require Maven on runner
+        run: command -v mvn
 
       - name: flutter build aar
         run: |
@@ -43,7 +49,7 @@ jobs:
 
       - name: Publish to GitHub Packages
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.SLICE_GITHUB_TOKEN }}
           GITHUB_ACTOR: ${{ github.actor }}
           GITHUB_REPOSITORY: ${{ github.repository }}
         run: ./tool/publish_github_packages.sh
